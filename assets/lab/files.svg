@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 210">
+<defs><filter id="s"><feDropShadow dx="0" dy="9" stdDeviation="7" flood-opacity=".35"/></filter></defs>
+<g filter="url(#s)"><path d="M34 52h75l17 18h100v110H34z" fill="#7b4d2b" stroke="#332116" stroke-width="6"/><rect x="47" y="72" width="166" height="90" rx="4" fill="#b87742" stroke="#422919" stroke-width="4"/>
+<g transform="translate(62 45) rotate(-4)"><rect width="138" height="90" rx="3" fill="#e9e1cf" stroke="#6b6255" stroke-width="3"/><path d="M14 22h108M14 38h92M14 54h101M14 70h76" stroke="#7c766c" stroke-width="4"/></g>
+<g transform="translate(84 34) rotate(7)"><rect width="126" height="84" rx="3" fill="#f2ead8" stroke="#6b6255" stroke-width="3"/><circle cx="102" cy="18" r="10" fill="#b83a31"/><path d="M14 28h86M14 45h94M14 62h65" stroke="#817a6f" stroke-width="4"/></g>
+<path d="M53 169h156" stroke="#2d1d15" stroke-width="8"/></g>
+</svg>
