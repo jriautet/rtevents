@@ -27,6 +27,12 @@ if($action==='start'){
     log_game($id,'stage_forced',['stage'=>$stage]);
 }elseif($action==='add_time'){
     $pdo->prepare("UPDATE games SET ends_at=datetime(COALESCE(ends_at,CURRENT_TIMESTAMP), '+5 minutes'),stage_ends_at=datetime(COALESCE(stage_ends_at,CURRENT_TIMESTAMP), '+5 minutes') WHERE id=?")->execute([$id]);log_game($id,'time_added',['minutes'=>5]);
+}elseif($action==='gm_event'){
+    $event=preg_replace('/[^a-z_]/','',strtolower((string)($_POST['event']??'boarding')));
+    $allowed=['boarding','story_start','lights','engine','anomaly','coordinates','prepare_jump','jump','reset_scene'];
+    if(!in_array($event,$allowed,true)) $event='boarding';
+    set_state($id,'gm_event',$event);
+    log_game($id,'gm_event',['event'=>$event,'stage'=>$g['current_stage']]);
 }elseif($action==='reveal_answer'){
     $current=(int)$g['current_stage'];
     if($current>0){ set_state($id,'answer_revealed_stage_'.$current,'1'); log_game($id,'answer_revealed',['stage'=>$current]); }

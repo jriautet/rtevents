@@ -1,28 +1,15 @@
 <?php
-require_once __DIR__.'/../config/config.php'; start_app_session();
+require_once __DIR__.'/../config/config.php';
 $code=strtoupper(trim($_GET['code']??''));
-?><!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RT ESCAPE · ÉCRAN DE SALLE</title><link rel="stylesheet" href="/assets/app.css"></head><body class="room-screen"><div id="screen"></div><script>
-const code=<?=json_encode($code)?>;let lastStage=0,lastSolved=false;function esc(s){return String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}function fmt(s){s=Math.max(0,Number(s)||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+?><!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RT ESCAPE · SALLE</title><link rel="stylesheet" href="/assets/app.css"></head><body class="room-screen cinematic-room"><div id="screen"></div><script>
+const code=<?=json_encode($code)?>;let lastEvent='';
+const esc=s=>String(s??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=s=>{s=Math.max(0,Number(s)||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const eventText={boarding:['ÉQUIPAGE EN ATTENTE','Prenez place. Le voyage n’a pas encore commencé.'],story_start:['ET SI NOUS REMONTIONS LE TEMPS ?','Écoutez le maître du jeu. La DeLorean va reprendre vie.'],lights:['SYSTÈMES D’ALIMENTATION','Les instruments du tableau de bord s’allument progressivement.'],engine:['MOTEUR PRÊT','La DeLorean attend les dernières consignes.'],anomaly:['ANOMALIE TEMPORELLE','Quelque chose vient de traverser la ligne temporelle. Observez.'],coordinates:['COORDONNÉES DÉTECTÉES','Les informations recueillies par l’équipage commencent à converger.'],prepare_jump:['PRÉPAREZ-VOUS','Le Flux Capacitor entre en charge.'],jump:['ACCROCHEZ-VOUS','VOYAGE TEMPOREL EN COURS…'],reset_scene:['SYSTÈMES STABILISÉS','La DeLorean revient en attente.']};
 async function poll(){const r=await fetch('/api/public_state.php?code='+encodeURIComponent(code),{cache:'no-store'});if(!r.ok)return;const d=await r.json();if(d.ok)render(d.game)}
-function render(g){
- const m=g.mission||{},p=g.puzzle||{},crew=g.crew||[],solved=g.puzzle_solved,stage=Number(g.stage||0);
- if(stage!==lastStage){lastStage=stage;document.body.className='room-screen stage-'+stage;}
- let html='<div class="screen-top"><div class="screen-brand">RT <span>ESCAPE</span></div><div>HILL VALLEY · 1985</div><div class="screen-timer">'+fmt(g.stage_remaining)+'</div></div>';
- if(!stage){
-   const ready=crew.filter(x=>Number(x.ready)===1).length;
-   html+='<div class="screen-boarding"><div class="screen-boarding-title"><span class="screen-kicker">DELOREAN DMC-12 · TEMPORAL RESEARCH VEHICLE</span><h1>PRENEZ PLACE</h1><p>L’équipage doit être installé avant l’activation du Flux Capacitor.</p></div><div class="screen-car"><div class="screen-windshield">HILL VALLEY · 1985</div><div class="screen-dashboard"><div class="screen-gauge">0<br><small>MPH</small></div><div class="screen-flux-core">⚡<small>FLUX CAPACITOR</small><b>OFFLINE</b></div><div class="screen-gauge small-gauge">21:00</div></div></div><div class="crew-board">';
-   crew.forEach((x,i)=>{html+='<div class="crew-seat '+(Number(x.ready)?'ready':'')+'"><span>'+(Number(x.ready)?'✓':'○')+'</span><div><b>'+esc(x.name)+'</b><small>'+esc(x.seat||'POSTE TEMPORAIRE')+'</small></div></div>';});
-   html+='</div><div class="screen-ready-count">ÉQUIPAGE EN PLACE · '+ready+' / '+crew.length+'</div></div>';
- }else if(g.status==='finished'){
-   html+='<div class="screen-center finale-screen"><div class="screen-flux">⚡</div><div class="screen-kicker">TIMELINE RESTORED</div><h1>MISSION ACCOMPLIE</h1><p>88 MPH · 1.21 GW · HILL VALLEY 1985</p></div>';
- }else if(stage===1 && !solved){
-   html+='<div class="screen-delorean"><div class="delorean-windshield"><span>HILL VALLEY</span><b>1985</b><small>FLUX CAPACITOR · OFFLINE</small></div><div class="delorean-dash"><div class="screen-gauge large">0<small>MPH</small></div><div class="screen-flux-core live">⚡<small>FLUX CAPACITOR</small><b>STANDBY</b></div><div class="screen-controls"><span>TIME CIRCUIT</span><strong>-- / -- / ----</strong><strong>--:--</strong></div></div><div class="screen-narrative"><span class="screen-kicker">ÉPREUVE 01 · ET SI NOUS REMONTIONS LE TEMPS ?</span><h1>LA DELOREAN ATTEND SON ÉQUIPAGE</h1><p>Écoutez le maître du jeu. Observez vos postes. Les informations sont réparties entre vous.</p><div class="screen-progress"><i style="width:'+Math.min(100,stage/5*100)+'%"></i></div></div></div>';
- }else if(solved){
-   html+='<div class="screen-center solved-screen"><div class="screen-flux">✓</div><div class="screen-kicker">ÉPREUVE '+String(stage).padStart(2,'0')+' VALIDÉE</div><h1>LA TIMELINE SE STABILISE</h1><p>L’ORGANISATEUR PRÉPARE LA SUITE…</p></div>';
- }else{
-   html+='<div class="screen-center"><div class="screen-kicker">ÉPREUVE '+String(stage).padStart(2,'0')+' / 05</div><h1>'+esc(m.title)+'</h1><p>'+esc(m.intro)+'</p><div class="screen-progress"><i style="width:'+Math.min(100,stage/5*100)+'%"></i></div></div>';
- }
- document.getElementById('screen').innerHTML=html;
-}
-poll();setInterval(poll,1000);
+function render(g){const crew=g.crew||[],ready=crew.filter(x=>Number(x.ready)).length,ev=g.gm_event||'boarding',txt=eventText[ev]||eventText.boarding;if(ev!==lastEvent){lastEvent=ev;document.body.classList.remove('event-flash');void document.body.offsetWidth;document.body.classList.add('event-flash');}
+let html=`<div class="cinema-top"><b>RT <span>ESCAPE</span></b><span>HILL VALLEY · 1985</span><strong>${fmt(g.stage_remaining)}</strong></div><div class="delorean-cinema"><div class="windshield-cinema"><div class="rain-lines"></div><div class="hill-sign">HILL VALLEY</div><div class="road-cinema"><i></i><i></i><i></i></div></div><div class="dashboard-cinema"><div class="gauge-cinema"><b>${ev==='jump'?'88':'0'}</b><small>MPH</small></div><div class="flux-cinema ${ev==='jump'?'flux-on':''}"><div class="flux-core">⚡</div><span>FLUX CAPACITOR</span><b>${ev==='jump'?'1.21 GW':ev==='prepare_jump'?'CHARGING':'OFFLINE'}</b></div><div class="time-circuit-cinema"><small>TIME CIRCUIT</small><b>${ev==='coordinates'?'10 · 26 · 1985':'-- · -- · ----'}</b><b>${ev==='coordinates'?'21:00':'--:--'}</b></div></div><div class="dash-detail left-detail">DMC-12<br><small>CONNECTION: OK</small></div><div class="dash-detail right-detail">EQUIPAGE<br><small>${ready} / ${crew.length} EN PLACE</small></div></div><div class="cinema-message"><span>${esc(txt[0])}</span><h1>${esc(txt[1])}</h1><div class="crew-mini">${crew.map(x=>`<div class="crew-mini-item ${Number(x.ready)?'on':''}"><i></i>${esc(x.name)}<small>${esc(x.seat||'')}</small></div>`).join('')}</div></div>`;
+if(ev==='jump')html+=`<div class="jump-overlay"><div>88 MPH</div><small>ACCROCHEZ-VOUS…</small></div>`;
+document.getElementById('screen').innerHTML=html;}
+poll();setInterval(poll,700);
 </script></body></html>

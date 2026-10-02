@@ -24,22 +24,13 @@ function save_puzzle_state(int $gameId,int $stage,array $state): void { set_stat
 function finish_puzzle_if_ready(int $gameId,int $stage,array $state): bool { if(empty($state['_solved'])) return false; set_state($gameId,'puzzle_stage_'.$stage.'_solved','1'); log_game($gameId,'puzzle_solved',['stage'=>$stage,'player_id'=>(int)($_SESSION['player_id']??0)]); return true; }
 $s=puzzle_state($gameId,$stage); $changed=false; $message=''; $solved=false;
 if($stage===1){
-  if($action==='clock'){
-    $h=max(0,min(23,(int)($_POST['h']??0)));$m=max(0,min(59,(int)($_POST['m']??0)));$s['clock']=['h'=>$h,'m'=>$m];$message=sprintf('Horloge réglée sur %02d:%02d',$h,$m);$changed=true;
-    if($h===10&&$m===4){$s['clock_ok']=1;$message='CLIC. L’horloge temporelle vient de se verrouiller.';}
-  } elseif($action==='files'){
-    $order=preg_replace('/[^ABC]/','',strtoupper($value));$s['files_order']=$order;$changed=true;$message='Les dossiers sont réorganisés.';if($order==='ABC'){$s['files_ok']=1;$message='Les dates s’alignent. Le dossier secret s’ouvre.';}
-  } elseif($action==='radio'){
-    $freq=max(87,min(90,(float)$value));$freq=round($freq,1);$s['frequency']=$freq;$changed=true;$message=number_format($freq,1,'.','').' MHz';if(abs($freq-88.7)<0.01){$s['radio_ok']=1;$message='SIGNAL VERROUILLÉ · 88.7 MHz';}
-  } elseif($action==='console'){
-    $token=$value; $seq=$s['console_seq']??[]; if(in_array($token,['88','121','1004'],true)){$seq[]=$token;$s['console_seq']=array_slice($seq,-3);$changed=true;$message='Commande enregistrée.';if(($s['console_seq']??[])===['88','121','1004']){$s['console_ok']=1;$message='CONSOLE ARMÉE · FLUX PRÊT';}}
+  // Épreuve 1 = mise en scène physique / narration du maître du jeu.
+  // Les joueurs n'ont pas à remplir un formulaire : le logiciel synchronise uniquement la salle.
+  if($action==='ack'){
+      $message='Bien reçu. Restez à votre poste et écoutez le maître du jeu.'; $changed=true;
+      $s['ack_'.$playerId]=1;
   }
-  $pcq=db()->prepare("SELECT COUNT(*) FROM players WHERE game_id=?");$pcq->execute([$gameId]);$playerCount=(int)$pcq->fetchColumn();
-  if($action==='scan' && $myRole==='observer'){$s['observer_ok']=1;$changed=true;$message='Le scanner révèle une anomalie sur le pare-brise.';}
-  if($action==='navigate' && $myRole==='navigator'){$s['navigator_ok']=1;$changed=true;$message='Coordonnées de Hill Valley confirmées.';}
-  $core=!empty($s['clock_ok'])&&!empty($s['files_ok'])&&!empty($s['radio_ok'])&&!empty($s['console_ok']);
-  $extra5=$playerCount<5||!empty($s['observer_ok']); $extra6=$playerCount<6||!empty($s['navigator_ok']);
-  if($core&&$extra5&&$extra6){$s['_solved']=1;$solved=true;}
+  $message=$message ?: 'La DeLorean attend. Le maître du jeu dirige la scène.';
 } elseif($stage===2){
   if($action==='archive'){
     $id=$value;$s['opened'][$id]=1;$changed=true;$message='Dossier consulté.';
