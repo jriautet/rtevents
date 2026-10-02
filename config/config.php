@@ -156,6 +156,7 @@ function set_state(int $gameId,string $key,string $value): void {
 function get_state(int $gameId,string $key,?string $default=null): ?string {
     $s=db()->prepare("SELECT state_value FROM game_state WHERE game_id=? AND state_key=?"); $s->execute([$gameId,$key]); $v=$s->fetchColumn(); return $v===false?$default:(string)$v;
 }
+function answer_revealed(int $gameId,int $stage): bool { return get_state($gameId,'answer_revealed_stage_'.$stage,'0') === '1'; }
 function game_content(string $slug): array {
     if ($slug !== 'retour-vers-le-futur') return [];
     return [

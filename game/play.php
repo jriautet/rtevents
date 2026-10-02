@@ -14,7 +14,7 @@ let state=null, poll=null, lastStage=0, modalForced=false;
 const esc=s=>{const d=document.createElement('div');d.textContent=s??'';return d.innerHTML};
 function fmt(sec){sec=Math.max(0,Number(sec)||0);return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0')}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');setTimeout(()=>t.classList.add('hidden'),2600)}
-async function fetchState(){const r=await fetch('/api/state.php',{cache:'no-store'});if(!r.ok)return;state=(await r.json()).game;render();}
+async function fetchState(){const r=await fetch('/api/state.php',{cache:'no-store'});if(r.status===410){document.body.innerHTML='<main class="join"><section class="join-card"><span class="eyebrow">PARTIE TERMINÉE</span><h1>Vous avez été retiré</h1><p>L’organisateur vous a retiré de cette partie.</p><a class="btn primary" href="/game/login.php">REJOINDRE UNE AUTRE PARTIE</a></section></main>';clearInterval(poll);return;}if(!r.ok)return;const d=await r.json();if(!d.ok)return;state=d.game;render();}
 function render(){
  if(!state)return; const stage=Number(state.stage); document.getElementById('stage').textContent=String(stage||1).padStart(2,'0');
  document.getElementById('timer').textContent=fmt(state.stage_remaining);
@@ -35,6 +35,7 @@ function render(){
    html+='</div>';
  }
  if(state.hint) html+='<div class="hint-box"><strong>INDICE DU PROFESSEUR</strong><p>'+esc(state.hint)+'</p></div>';
+ if(state.answer_revealed) html+='<div class="revealed-answer"><span>RÉPONSE RÉVÉLÉE PAR L'ORGANISATEUR</span><strong>'+esc(state.revealed_answer)+'</strong></div>';
  html+='<div id="result" class="result"></div>';
  if(state.response_required) html+='<button class="force-answer" onclick="openAnswer()">⚠️ DONNER LA RÉPONSE</button>';
  document.getElementById('mission-content').innerHTML=html;

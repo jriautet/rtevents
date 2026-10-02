@@ -23,9 +23,23 @@ if($action==='start'){
     $stage=max(0,min(5,(int)($_POST['stage']??0)));
     $stageStart=$stage>0?$now:null; $stageEnd=$stage>0?gmdate('Y-m-d H:i:s',time()+$stageSecs):null;
     $pdo->prepare("UPDATE games SET current_stage=?,stage_started_at=?,stage_ends_at=?,response_required=0,response_value=NULL WHERE id=?")->execute([$stage,$stageStart,$stageEnd,$id]);
+    if($stage>0) set_state($id,'answer_revealed_stage_'.$stage,'0');
     log_game($id,'stage_forced',['stage'=>$stage]);
 }elseif($action==='add_time'){
     $pdo->prepare("UPDATE games SET ends_at=datetime(COALESCE(ends_at,CURRENT_TIMESTAMP), '+5 minutes'),stage_ends_at=datetime(COALESCE(stage_ends_at,CURRENT_TIMESTAMP), '+5 minutes') WHERE id=?")->execute([$id]);log_game($id,'time_added',['minutes'=>5]);
+}elseif($action==='reveal_answer'){
+    $current=(int)$g['current_stage'];
+    if($current>0){ set_state($id,'answer_revealed_stage_'.$current,'1'); log_game($id,'answer_revealed',['stage'=>$current]); }
+}elseif($action==='hide_answer'){
+    $current=(int)$g['current_stage'];
+    if($current>0){ set_state($id,'answer_revealed_stage_'.$current,'0'); log_game($id,'answer_hidden',['stage'=>$current]); }
+}elseif($action==='delete_player'){
+    $playerId=(int)($_POST['player_id']??0);
+    if($playerId>0){ $pdo->prepare('DELETE FROM players WHERE id=? AND game_id=?')->execute([$playerId,$id]); log_game($id,'player_deleted',['player_id'=>$playerId]); }
+}elseif($action==='delete_game'){
+    log_game($id,'game_deleted');
+    $pdo->prepare('DELETE FROM games WHERE id=?')->execute([$id]);
+    redirect('/admin/index.php');
 }elseif($action==='hint'){
     $stage=(int)$g['current_stage']; if($stage<1)$stage=1; $content=game_content($g['slug']); $hint=$content[$stage]['answer_hint']??'Cherchez encore dans les éléments interactifs.'; set_state($id,'hint_stage_'.$stage,$hint); log_game($id,'hint_given',['stage'=>$stage]);
 }elseif($action==='force_response'){
@@ -33,7 +47,7 @@ if($action==='start'){
 }elseif($action==='next'){
     $next=min(5,(int)$g['current_stage']+1); $stageStart=$next>0?$now:null; $stageEnd=$next>0?gmdate('Y-m-d H:i:s',time()+$stageSecs):null;
     if($next>5){$pdo->prepare("UPDATE games SET status='finished',completed_at=? WHERE id=?")->execute([$now,$id]);}
-    else {$pdo->prepare("UPDATE games SET current_stage=?,stage_started_at=?,stage_ends_at=?,response_required=0,response_value=NULL,status='running' WHERE id=?")->execute([$next,$stageStart,$stageEnd,$id]);}
+    else {$pdo->prepare("UPDATE games SET current_stage=?,stage_started_at=?,stage_ends_at=?,response_required=0,response_value=NULL,status='running' WHERE id=?")->execute([$next,$stageStart,$stageEnd,$id]); set_state($id,'answer_revealed_stage_'.$next,'0');}
     log_game($id,'stage_advanced',['stage'=>$next]);
 }elseif($action==='finish'){
     $pdo->prepare("UPDATE games SET status='finished',completed_at=? WHERE id=?")->execute([$now,$id]);log_game($id,'game_finished');
