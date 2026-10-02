@@ -1,49 +1,94 @@
-# RT EVENTS — ESCAPE
+# RT EVENTS — ESCAPE V2
 
-Base complète pour héberger le portail Escape Game directement sous `rtevents.eu`.
+Moteur web d'Escape Game hébergé sous `rtevents.eu`.
 
 ## Architecture
 
-- `/` — landing page RT EVENTS
-- `/game/login.php` — accès joueur par code
-- `/game/play.php` — moteur de jeu / interface joueur
-- `/admin/login.php` — connexion administrateur
-- `/admin/index.php` — préparation des parties
-- `/admin/game.php` — contrôle d'une partie
-- `/install/install.php` — initialisation SQLite
+- `/` — présentation RT EVENTS
+- `/game/login.php` — entrée joueur / code / QR
+- `/game/play.php` — expérience joueur
+- `/api/join.php` — connexion à une partie
+- `/api/state.php` — état temps réel du jeu
+- `/api/discover.php` — découverte d'un élément
+- `/api/answer.php` — validation de réponse
+- `/admin/login.php` — connexion organisateur
+- `/admin/index.php` — création et liste des parties
+- `/admin/game.php` — cockpit organisateur + QR code
+- `/admin/game_action.php` — commandes de pilotage
+- `/install/install.php` — installation / migration SQLite
+
+## V2 — fonctionnement
+
+### Organisateur
+
+Depuis le back-office :
+
+- choisir scénario
+- choisir durée : 20 / 30 / 45 / 60 minutes
+- choisir difficulté
+- choisir mode local ou connecté
+- choisir variante A/B/C
+- générer un code de partie
+- afficher un QR code de connexion
+- voir les joueurs connectés
+- démarrer / mettre en pause
+- ajouter 5 minutes
+- donner un indice
+- imposer une réponse
+- passer à l'épreuve suivante
+- aller directement à une étape
+- terminer ou réinitialiser la partie
+
+### Joueurs
+
+Le joueur scanne le QR code ou saisit le code, puis son prénom.
+
+Le joueur ne possède aucun accès au back-office.
+
+### Épreuves temporisées
+
+Le temps total est réparti sur 5 épreuves. Chaque épreuve possède son propre chrono.
+
+Quand le temps d'une épreuve arrive à zéro, le jeu passe en **RÉPONSE OBLIGATOIRE**. Les joueurs doivent alors proposer une réponse avant de pouvoir progresser.
+
+Le temps total de la partie reste également surveillé.
+
+### Gameplay Retour vers le Futur
+
+Les 5 premières épreuves sont déjà structurées dans le moteur :
+
+1. Le laboratoire — recherche
+2. Les archives de Hill Valley — observation
+3. La radio temporelle — musique / logique
+4. La DeLorean — manipulation
+5. 1.21 Gigawatts — finale
+
+Chaque épreuve contient plusieurs objets interactifs à examiner. Les découvertes sont enregistrées et peuvent devenir individuelles en mode connecté.
 
 ## Installation Plesk
 
-1. Créer/ouvrir le site `rtevents.eu`.
-2. Envoyer tout le contenu du dossier dans le document root.
-3. Vérifier que PHP 8.1+ est actif avec l'extension SQLite (`pdo_sqlite`).
-4. Ouvrir `/install/install.php` une seule fois.
-5. Se connecter à `/admin/login.php`.
-6. Identifiant initial : `admin`
-7. Mot de passe initial : `ChangeMe!2026`
-8. Supprimer ou protéger le dossier `/install` après installation.
+1. Envoyer le contenu du projet dans le document root.
+2. Vérifier PHP 8.1+ et `pdo_sqlite`.
+3. Ouvrir `/install/install.php` une fois après déploiement.
+4. Se connecter à `/admin/login.php`.
+5. Identifiant initial : `admin`
+6. Mot de passe initial : `ChangeMe!2026`
+7. Protéger ou supprimer `/install` après migration.
 
-## Fonctionnement
+## Déploiement Git
 
-L'administrateur crée une partie :
-- scénario
-- durée
-- difficulté
-- mode
-- code unique généré automatiquement
+Projet prévu pour :
 
-Les joueurs entrent le code et leur prénom. Ils rejoignent alors la partie.
+```text
+C:\Users\admin\Documents\rteventsfr
+```
 
-Le moteur est volontairement organisé par scénario afin d'ajouter ensuite :
-- d'autres histoires
-- variantes A/B/C
-- épreuves supplémentaires
-- modes connecté
-- rôles individuels
-- système d'indices
-- sons / animations
-- statistiques
+Puis :
 
-## Important
+```powershell
+git add .
+git commit -m "RT ESCAPE V2 - moteur interactif et cockpit"
+git push origin main
+```
 
-Cette première version fournit l'ossature fonctionnelle complète et le premier gameplay de démonstration. Le scénario Retour vers le Futur doit ensuite être enrichi avec les 5 vraies épreuves interactives et le système de synchronisation temps réel pour obtenir la version événementielle finale.
+Le dépôt utilisé est : `git@github.com:jriautet/rtevents.git`.
