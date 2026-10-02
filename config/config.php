@@ -109,7 +109,11 @@ function ensure_schema(PDO $pdo): void {
     $pcols = [];
     foreach ($pdo->query("PRAGMA table_info(players)")->fetchAll(PDO::FETCH_ASSOC) as $c) $pcols[$c['name']] = true;
     if (!isset($pcols['player_token'])) $pdo->exec("ALTER TABLE players ADD COLUMN player_token TEXT");
-    if (!isset($pcols['last_seen_at'])) $pdo->exec("ALTER TABLE players ADD COLUMN last_seen_at TEXT DEFAULT CURRENT_TIMESTAMP");
+    if (!isset($pcols['last_seen_at'])) {
+        // SQLite interdit DEFAULT CURRENT_TIMESTAMP lors d'un ALTER TABLE ADD COLUMN.
+        $pdo->exec("ALTER TABLE players ADD COLUMN last_seen_at TEXT");
+        $pdo->exec("UPDATE players SET last_seen_at = CURRENT_TIMESTAMP WHERE last_seen_at IS NULL");
+    }
 
     $hash = password_hash(DEFAULT_ADMIN_PASSWORD, PASSWORD_DEFAULT);
     $pdo->prepare("INSERT OR IGNORE INTO admins(username,password_hash) VALUES(?,?)")->execute([DEFAULT_ADMIN_USER,$hash]);
