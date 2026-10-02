@@ -1,0 +1,1 @@
+<?php require_once __DIR__.'/../config/config.php'; start_app_session(); session_destroy(); redirect('/');
