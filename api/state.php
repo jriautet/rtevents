@@ -24,8 +24,14 @@ if($g['status']==='running' && ($stageRemaining<=0 || $totalRemaining<=0) && !$g
 }
 $hint=get_state($gameId,'hint_stage_'.$stage,null);
 $answerRevealed=$stage>0 ? answer_revealed($gameId,$stage) : false;
+$puzzleRaw=$stage>0 ? get_state($gameId,'puzzle_stage_'.$stage,'{}') : '{}'; $puzzleState=json_decode($puzzleRaw,true); if(!is_array($puzzleState))$puzzleState=[];
+$puzzleSolved=$stage>0 && get_state($gameId,'puzzle_stage_'.$stage.'_solved','0')==='1';
 $revealedAnswer=($answerRevealed && $mission) ? $mission['answer'] : null;
 $discoveries=db()->prepare("SELECT discovery_key FROM discoveries WHERE game_id=? AND (player_id IS NULL OR player_id=?) AND stage=? ORDER BY id");$discoveries->execute([$gameId,$playerId,$stage]);
 $found=array_column($discoveries->fetchAll(PDO::FETCH_ASSOC),'discovery_key');
-$players=db()->prepare("SELECT name FROM players WHERE game_id=? ORDER BY id");$players->execute([$gameId]);$names=array_column($players->fetchAll(PDO::FETCH_ASSOC),'name');
-echo json_encode(['ok'=>true,'game'=>['id'=>(int)$g['id'],'code'=>$g['code'],'status'=>$g['status'],'mode'=>$g['mode'],'duration'=>(int)$g['duration'],'difficulty'=>$g['difficulty'],'variant'=>$g['variant'],'stage'=>$stage,'response_required'=>(bool)$g['response_required'],'response_value'=>$g['response_value'], 'answer_revealed'=>$answerRevealed, 'revealed_answer'=>$revealedAnswer,'stage_remaining'=>$stageRemaining,'total_remaining'=>$totalRemaining,'mission'=>$mission,'hint'=>$hint,'discoveries'=>$found,'players'=>$names]],JSON_UNESCAPED_UNICODE);
+$players=db()->prepare("SELECT id,name,seat,role_key,ready FROM players WHERE game_id=? ORDER BY id");$players->execute([$gameId]);$playerRows=$players->fetchAll(PDO::FETCH_ASSOC);$names=array_column($playerRows,'name');
+$me=null; foreach($playerRows as $pr){ if((int)$pr['id']===$playerId){$me=$pr;break;} }
+$roleLabels=['driver'=>'LE CONDUCTEUR','chrononaut'=>'LE CHRONONAUTE','archivist'=>'L’ARCHIVISTE','technician'=>'LE TECHNICIEN','observer'=>'L’OBSERVATEUR','navigator'=>'LE NAVIGATEUR'];
+if($me){$me['role_label']=$roleLabels[$me['role_key']]??$me['role_key']; $roleDefs=player_roles_for_count(max(1,count($playerRows))); foreach($roleDefs as $rd){if($rd['role_key']===$me['role_key']){$me['secret']=$rd['secret'];break;}}}
+$allReady=count($playerRows)>0 && count(array_filter($playerRows,fn($x)=>(int)$x['ready']===1))===count($playerRows);
+echo json_encode(['ok'=>true,'game'=>['id'=>(int)$g['id'],'code'=>$g['code'],'status'=>$g['status'],'mode'=>$g['mode'],'duration'=>(int)$g['duration'],'difficulty'=>$g['difficulty'],'variant'=>$g['variant'],'stage'=>$stage,'response_required'=>(bool)$g['response_required'],'response_value'=>$g['response_value'], 'answer_revealed'=>$answerRevealed, 'revealed_answer'=>$revealedAnswer,'stage_remaining'=>$stageRemaining,'total_remaining'=>$totalRemaining,'mission'=>$mission,'hint'=>$hint,'discoveries'=>$found,'players'=>$names,'crew'=>$playerRows,'me'=>$me,'all_ready'=>$allReady,'puzzle'=>$puzzleState,'puzzle_solved'=>$puzzleSolved]],JSON_UNESCAPED_UNICODE);

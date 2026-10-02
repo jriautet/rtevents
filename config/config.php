@@ -63,6 +63,9 @@ function ensure_schema(PDO $pdo): void {
         player_token TEXT UNIQUE,
         joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
         last_seen_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        seat TEXT NULL,
+        role_key TEXT NULL,
+        ready INTEGER DEFAULT 0,
         FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
     )");
     $pdo->exec("CREATE TABLE IF NOT EXISTS game_state (
@@ -109,6 +112,9 @@ function ensure_schema(PDO $pdo): void {
     $pcols = [];
     foreach ($pdo->query("PRAGMA table_info(players)")->fetchAll(PDO::FETCH_ASSOC) as $c) $pcols[$c['name']] = true;
     if (!isset($pcols['player_token'])) $pdo->exec("ALTER TABLE players ADD COLUMN player_token TEXT");
+    if (!isset($pcols['seat'])) $pdo->exec("ALTER TABLE players ADD COLUMN seat TEXT NULL");
+    if (!isset($pcols['role_key'])) $pdo->exec("ALTER TABLE players ADD COLUMN role_key TEXT NULL");
+    if (!isset($pcols['ready'])) $pdo->exec("ALTER TABLE players ADD COLUMN ready INTEGER DEFAULT 0");
     if (!isset($pcols['last_seen_at'])) {
         // SQLite interdit DEFAULT CURRENT_TIMESTAMP lors d'un ALTER TABLE ADD COLUMN.
         $pdo->exec("ALTER TABLE players ADD COLUMN last_seen_at TEXT");
@@ -157,6 +163,53 @@ function get_state(int $gameId,string $key,?string $default=null): ?string {
     $s=db()->prepare("SELECT state_value FROM game_state WHERE game_id=? AND state_key=?"); $s->execute([$gameId,$key]); $v=$s->fetchColumn(); return $v===false?$default:(string)$v;
 }
 function answer_revealed(int $gameId,int $stage): bool { return get_state($gameId,'answer_revealed_stage_'.$stage,'0') === '1'; }
+
+function player_roles_for_count(int $count): array {
+    $sets = [
+        1 => [['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu es le seul à pouvoir déclencher le départ. Observe bien le tableau de bord.']],
+        2 => [
+            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu es responsable du départ.'],
+            ['seat'=>'PASSAGER','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les anomalies temporelles et les informations affichées par les instruments.'],
+        ],
+        3 => [
+            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Ton tableau de bord contient une information que les autres n’ont pas.'],
+            ['seat'=>'PASSAGER GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements. Ta mémoire de Hill Valley sera indispensable.'],
+            ['seat'=>'PASSAGER DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu comprends les systèmes de la machine. Certaines commandes te sont destinées.'],
+        ],
+        4 => [
+            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu dois écouter les autres mais tu es responsable du départ.'],
+            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles. Tu recevras des informations que les autres ne voient pas.'],
+            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements. Certaines informations historiques sont cachées pour toi.'],
+            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu es le spécialiste de la machine. Tu sais reconnaître les systèmes à remettre sous tension.'],
+        ],
+        5 => [
+            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ.'],
+            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles.'],
+            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements de Hill Valley.'],
+            ['seat'=>'PASSAGER ARRIÈRE CENTRE','role_key'=>'observer','label'=>'L’OBSERVATEUR','secret'=>'Tu remarques les détails étranges et les indices dissimulés dans la scène.'],
+            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu maîtrises les systèmes électriques et le Flux Capacitor.'],
+        ],
+        6 => [
+            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ.'],
+            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles.'],
+            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements de Hill Valley.'],
+            ['seat'=>'PASSAGER ARRIÈRE CENTRE','role_key'=>'observer','label'=>'L’OBSERVATEUR','secret'=>'Tu remarques les détails étranges et les indices dissimulés dans la scène.'],
+            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu maîtrises les systèmes électriques et le Flux Capacitor.'],
+            ['seat'=>'NAVIGATEUR','role_key'=>'navigator','label'=>'LE NAVIGATEUR','secret'=>'Tu surveilles la destination et les coordonnées du voyage.'],
+        ],
+    ];
+    return $sets[max(1,min(6,$count))];
+}
+function rebalance_player_roles(int $gameId): void {
+    $q=db()->prepare("SELECT id FROM players WHERE game_id=? ORDER BY id"); $q->execute([$gameId]); $ids=array_column($q->fetchAll(PDO::FETCH_ASSOC),'id');
+    $roles=player_roles_for_count(count($ids));
+    $up=db()->prepare("UPDATE players SET seat=?,role_key=? WHERE id=?");
+    foreach($ids as $i=>$pid){$r=$roles[$i]??$roles[count($roles)-1];$up->execute([$r['seat'],$r['role_key'],$pid]);}
+}
+function all_players_ready(int $gameId): bool {
+    $q=db()->prepare("SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN ready=1 THEN 1 ELSE 0 END),0) ready FROM players WHERE game_id=?");
+    $q->execute([$gameId]); $r=$q->fetch(PDO::FETCH_ASSOC); return (int)$r['total']>0 && (int)$r['total']===(int)$r['ready'];
+}
 function game_content(string $slug): array {
     if ($slug !== 'retour-vers-le-futur') return [];
     return [

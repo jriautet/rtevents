@@ -6,7 +6,7 @@ $now=iso_now(); $stageSecs=stage_duration_seconds($g);
 if($action==='start'){
     $status=$g['status']==='paused'?'running':'running';
     if(empty($g['started_at'])){
-        $pdo->prepare("UPDATE games SET status='running',started_at=?,ends_at=datetime(?,'+'||duration||' minutes'),stage_started_at=?,stage_ends_at=datetime(?,'+'||?||' seconds'),response_required=0,response_value=NULL WHERE id=?")
+        $pdo->prepare("UPDATE games SET status='running',current_stage=CASE WHEN current_stage=0 THEN 1 ELSE current_stage END,started_at=?,ends_at=datetime(?,'+'||duration||' minutes'),stage_started_at=?,stage_ends_at=datetime(?,'+'||?||' seconds'),response_required=0,response_value=NULL WHERE id=?")
             ->execute([$now,$now,$now,$now,$stageSecs,$id]);
     } else {
         $pdo->prepare("UPDATE games SET status=?, response_required=0 WHERE id=?")->execute([$status,$id]);
@@ -18,7 +18,7 @@ if($action==='start'){
     $pdo->prepare("UPDATE games SET status='running' WHERE id=?")->execute([$id]); log_game($id,'game_resumed');
 }elseif($action==='reset'){
     $pdo->prepare("UPDATE games SET status='waiting',current_stage=0,started_at=NULL,ends_at=NULL,stage_started_at=NULL,stage_ends_at=NULL,response_required=0,response_value=NULL,completed_at=NULL WHERE id=?")->execute([$id]);
-    $pdo->prepare("DELETE FROM game_state WHERE game_id=?")->execute([$id]);$pdo->prepare("DELETE FROM discoveries WHERE game_id=?")->execute([$id]);log_game($id,'game_reset');
+    $pdo->prepare("DELETE FROM game_state WHERE game_id=?")->execute([$id]);$pdo->prepare("DELETE FROM discoveries WHERE game_id=?")->execute([$id]);$pdo->prepare("UPDATE players SET ready=0 WHERE game_id=?")->execute([$id]);log_game($id,'game_reset');
 }elseif($action==='stage'){
     $stage=max(0,min(5,(int)($_POST['stage']??0)));
     $stageStart=$stage>0?$now:null; $stageEnd=$stage>0?gmdate('Y-m-d H:i:s',time()+$stageSecs):null;
@@ -35,7 +35,7 @@ if($action==='start'){
     if($current>0){ set_state($id,'answer_revealed_stage_'.$current,'0'); log_game($id,'answer_hidden',['stage'=>$current]); }
 }elseif($action==='delete_player'){
     $playerId=(int)($_POST['player_id']??0);
-    if($playerId>0){ $pdo->prepare('DELETE FROM players WHERE id=? AND game_id=?')->execute([$playerId,$id]); log_game($id,'player_deleted',['player_id'=>$playerId]); }
+    if($playerId>0){ $pdo->prepare('DELETE FROM players WHERE id=? AND game_id=?')->execute([$playerId,$id]); rebalance_player_roles($id); log_game($id,'player_deleted',['player_id'=>$playerId]); }
 }elseif($action==='delete_game'){
     log_game($id,'game_deleted');
     $pdo->prepare('DELETE FROM games WHERE id=?')->execute([$id]);
