@@ -123,6 +123,12 @@ function ensure_schema(PDO $pdo): void {
         FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
     )");
 
+    // Migration V9 : chaque message appartient à l'épreuve courante.
+    // Cela empêche les anciens messages / anciennes épreuves de réapparaître sur le téléphone.
+    $mailboxCols = [];
+    foreach ($pdo->query("PRAGMA table_info(mailbox)")->fetchAll(PDO::FETCH_ASSOC) as $c) $mailboxCols[$c['name']] = true;
+    if (!isset($mailboxCols['stage'])) $pdo->exec("ALTER TABLE mailbox ADD COLUMN stage INTEGER NOT NULL DEFAULT 0");
+
     // Migration douce pour les anciennes bases créées avec la V1.
     $cols = [];
     foreach ($pdo->query("PRAGMA table_info(games)")->fetchAll(PDO::FETCH_ASSOC) as $c) $cols[$c['name']] = true;

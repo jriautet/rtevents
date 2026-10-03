@@ -14,3 +14,10 @@ Les anciennes données SQLite sont conservées ; le schéma s'enrichit automatiq
 
 ## Identité visuelle
 Le logo officiel RT ESCAPE fourni par RT EVENTS est intégré dans la landing page, l’accès joueur, le cockpit maître du jeu, l’interface joueur et l’écran salle via `assets/rt-escape-logo.png`.
+
+## V9.1 — mode live
+- Les interfaces joueur et écran salle utilisent une connexion **Server-Sent Events (SSE)** persistante au lieu d'une requête toutes les 1 à 1,5 secondes.
+- L'écran salle reste sur le hero tant qu'aucun média n'est actif ; une action du maître du jeu met à jour l'écran en direct.
+- Le cockpit admin affiche les connexions / positions des joueurs en direct sans recharger automatiquement toute la page.
+- Les messages de boîte aux lettres sont désormais rattachés à l'épreuve courante : les anciennes épreuves ne réapparaissent plus sur les téléphones lorsqu'on avance dans la partie.
+- Le chronomètre joueur est interpolé localement entre les mises à jour serveur.

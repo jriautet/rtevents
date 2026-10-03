@@ -31,5 +31,5 @@ function renderMedia(g){const m=g.room_media;if(!m)return '';
  return `<div class="room-media-overlay room-media-live"><div class="room-command-frame"><span>TRANSMISSION DU MAÎTRE DU JEU</span><h1>${esc(m.title||'MESSAGE')}</h1><p>${esc(m.body||'')}</p></div></div>`;
 }
 async function poll(){try{const r=await fetch('/api/public_state.php?code='+encodeURIComponent(code),{cache:'no-store'});if(!r.ok)return;const d=await r.json();if(!d.ok)return;const g=d.game||{};const h=crewHash(g.crew||[]);const mediaId=g.room_media?.id||null;if(h!==lastCrewHash||mediaId!==lastMediaId){lastCrewHash=h;lastMediaId=mediaId;document.getElementById('screen').innerHTML=renderBase(g)+renderMedia(g);if(mediaId&&g.room_media?.type==='video'){const v=document.querySelector('.room-video-frame video');if(v){v.play().catch(()=>{});}}}}catch(e){}}
-poll();setInterval(poll,1000);
+poll();let liveSource=null;function connectLive(){try{liveSource=new EventSource('/api/live.php?channel=room&code='+encodeURIComponent(code));liveSource.addEventListener('refresh',poll);liveSource.onerror=()=>{if(liveSource)liveSource.close();setTimeout(connectLive,2500);};}catch(e){setTimeout(connectLive,2500);}}connectLive();
 </script></body></html>

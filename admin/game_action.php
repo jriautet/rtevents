@@ -70,7 +70,7 @@ if($action==='start'){
         $dir=__DIR__.'/../uploads/escape'; if(!is_dir($dir))mkdir($dir,0755,true); $name=preg_replace('/[^A-Za-z0-9._-]/','_',basename($_FILES['message_file']['name'])); $name=time().'_'.bin2hex(random_bytes(4)).'_'.$name; $dest=$dir.'/'.$name;
         if(move_uploaded_file($_FILES['message_file']['tmp_name'],$dest)){ $url='/uploads/escape/'.$name; $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION)); if(in_array($ext,['jpg','jpeg','png','gif','webp']))$type='image'; elseif(in_array($ext,['mp4','webm','mov']))$type='video'; else $type='file'; }
     }
-    if($body==='' && $url===''){flash('Message vide.');} else { $pdo->prepare('INSERT INTO mailbox(game_id,sender_type,target_player_id,type,title,body,media_url) VALUES(?,?,?,?,?,?,?)')->execute([$id,'admin',$target,$type,$title,$body,$url]); log_game($id,'mailbox_admin',['target_player_id'=>$target,'type'=>$type,'title'=>$title]); flash($target?'Message envoyé au joueur.':'Message envoyé à tout le monde.'); }
+    if($body==='' && $url===''){flash('Message vide.');} else { $pdo->prepare('INSERT INTO mailbox(game_id,sender_type,target_player_id,type,title,body,media_url,stage) VALUES(?,?,?,?,?,?,?,?)')->execute([$id,'admin',$target,$type,$title,$body,$url,(int)$g['current_stage']]); log_game($id,'mailbox_admin',['target_player_id'=>$target,'type'=>$type,'title'=>$title]); flash($target?'Message envoyé au joueur.':'Message envoyé à tout le monde.'); }
 }elseif($action==='send_room_media'){
     $type=trim((string)($_POST['room_type']??'text')); $title=trim((string)($_POST['room_title']??'')); $body=trim((string)($_POST['room_body']??'')); $url=trim((string)($_POST['room_url']??''));
     if(!in_array($type,['text','image','video'],true))$type='text';
