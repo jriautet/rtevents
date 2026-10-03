@@ -62,6 +62,22 @@ if($action==='start'){
     log_game($id,'game_deleted');
     $pdo->prepare('DELETE FROM games WHERE id=?')->execute([$id]);
     redirect('/admin/index.php');
+}elseif($action==='send_message'){
+    $target=(int)($_POST['target_player_id']??0); $type=trim((string)($_POST['message_type']??'text')); $title=trim((string)($_POST['message_title']??'')); $body=trim((string)($_POST['message_body']??'')); $url='';
+    if($target>0){$ck=$pdo->prepare('SELECT id FROM players WHERE id=? AND game_id=?');$ck->execute([$target,$id]);if(!$ck->fetchColumn())$target=0;}
+    if(!in_array($type,['text','image','video','file'],true))$type='text';
+    if(!empty($_FILES['message_file']['tmp_name']) && is_uploaded_file($_FILES['message_file']['tmp_name'])){
+        $dir=__DIR__.'/../uploads/escape'; if(!is_dir($dir))mkdir($dir,0755,true); $name=preg_replace('/[^A-Za-z0-9._-]/','_',basename($_FILES['message_file']['name'])); $name=time().'_'.bin2hex(random_bytes(4)).'_'.$name; $dest=$dir.'/'.$name;
+        if(move_uploaded_file($_FILES['message_file']['tmp_name'],$dest)){ $url='/uploads/escape/'.$name; $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION)); if(in_array($ext,['jpg','jpeg','png','gif','webp']))$type='image'; elseif(in_array($ext,['mp4','webm','mov']))$type='video'; else $type='file'; }
+    }
+    if($body==='' && $url===''){flash('Message vide.');} else { $pdo->prepare('INSERT INTO mailbox(game_id,sender_type,target_player_id,type,title,body,media_url) VALUES(?,?,?,?,?,?,?)')->execute([$id,'admin',$target,$type,$title,$body,$url]); log_game($id,'mailbox_admin',['target_player_id'=>$target,'type'=>$type,'title'=>$title]); flash($target?'Message envoyé au joueur.':'Message envoyé à tout le monde.'); }
+}elseif($action==='send_room_media'){
+    $type=trim((string)($_POST['room_type']??'text')); $title=trim((string)($_POST['room_title']??'')); $body=trim((string)($_POST['room_body']??'')); $url=trim((string)($_POST['room_url']??''));
+    if(!in_array($type,['text','image','video'],true))$type='text';
+    if(!empty($_FILES['room_file']['tmp_name']) && is_uploaded_file($_FILES['room_file']['tmp_name'])){ $dir=__DIR__.'/../uploads/escape';if(!is_dir($dir))mkdir($dir,0755,true);$name=time().'_room_'.bin2hex(random_bytes(4)).'_'.preg_replace('/[^A-Za-z0-9._-]/','_',basename($_FILES['room_file']['name']));$dest=$dir.'/'.$name;if(move_uploaded_file($_FILES['room_file']['tmp_name'],$dest)){$url='/uploads/escape/'.$name;$ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));if(in_array($ext,['jpg','jpeg','png','gif','webp']))$type='image';elseif(in_array($ext,['mp4','webm','mov']))$type='video';}}
+    $pdo->prepare('UPDATE room_media SET active=0 WHERE game_id=?')->execute([$id]);$pdo->prepare('INSERT INTO room_media(game_id,type,title,body,media_url,active) VALUES(?,?,?,?,?,1)')->execute([$id,$type,$title,$body,$url]);log_game($id,'room_media',['type'=>$type,'title'=>$title]);flash('Écran salle mis à jour.');
+}elseif($action==='clear_room_media'){
+    $pdo->prepare('UPDATE room_media SET active=0 WHERE game_id=?')->execute([$id]);log_game($id,'room_media_clear');flash('Écran salle effacé.');
 }elseif($action==='hint'){
     $stage=(int)$g['current_stage']; if($stage<1)$stage=1; $content=game_content($g['slug']); $hint=$content[$stage]['answer_hint']??'Cherchez encore dans les éléments interactifs.'; set_state($id,'hint_stage_'.$stage,$hint); log_game($id,'hint_given',['stage'=>$stage]);
 }elseif($action==='force_response'){

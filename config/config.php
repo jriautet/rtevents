@@ -95,6 +95,33 @@ function ensure_schema(PDO $pdo): void {
         payload TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS mailbox (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_id INTEGER NOT NULL,
+        sender_type TEXT NOT NULL DEFAULT 'admin',
+        sender_player_id INTEGER NULL,
+        target_player_id INTEGER NULL,
+        type TEXT NOT NULL DEFAULT 'text',
+        title TEXT,
+        body TEXT,
+        media_url TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        read_at TEXT NULL,
+        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE,
+        FOREIGN KEY(sender_player_id) REFERENCES players(id) ON DELETE SET NULL,
+        FOREIGN KEY(target_player_id) REFERENCES players(id) ON DELETE CASCADE
+    )");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS room_media (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_id INTEGER NOT NULL,
+        type TEXT NOT NULL DEFAULT 'text',
+        title TEXT,
+        body TEXT,
+        media_url TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
+    )");
 
     // Migration douce pour les anciennes bases créées avec la V1.
     $cols = [];

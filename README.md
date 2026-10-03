@@ -1,20 +1,16 @@
-# RT EVENTS — ESCAPE ENGINE V7
+# RT ESCAPE V9 — Maître du jeu / boîte aux lettres interactive
 
-V7 ajoute un véritable **ÉCRAN SALLE générique** synchronisé avec les joueurs.
+RT ESCAPE devient une régie d'escape game dématérialisée : le maître du jeu garde la main sur les joueurs, les messages, les documents, les indices et l'écran salle.
 
-## Les 3 interfaces
-- **Joueurs** : chaque joueur joue depuis son téléphone, avec ses informations et commandes privées.
-- **Écran salle** : `/game/screen.php?code=XXXXXX` — TV / vidéoprojecteur. Il visualise l'état collectif, les énigmes et les éléments utiles à toute la salle sans révéler automatiquement les réponses.
-- **Maître du jeu / admin** : contrôle la partie, les événements, les indices, les réponses et le passage des étapes.
+## Principe
+- **Admin** : attribue les rôles et envoie librement consignes, énigmes, indices, images, vidéos et documents à un joueur ou à tout le groupe.
+- **Téléphone joueur** : boîte aux lettres interactive avec réception des transmissions, demande d'indice et envoi d'une réponse au maître du jeu.
+- **Écran salle** : le maître du jeu peut afficher texte, image ou vidéo à tout moment.
+- **Rôles** : aucune action joueur ne peut modifier son rôle ; seul l'admin peut l'attribuer.
+- **Dématérialisation** : les supports sont transmis numériquement et réutilisables.
 
-Le principe reste **room-first** : la salle physique est le jeu, les téléphones sont les interfaces individuelles et l'écran est le support commun.
+Les anciennes données SQLite sont conservées ; le schéma s'enrichit automatiquement au premier chargement.
 
-## Écran salle V7
-L'écran s'adapte automatiquement à l'étape :
-1. attente et mise en place de l'équipage ;
-2. visualisation des archives et progression collective ;
-3. console radio / fréquence / signal ;
-4. time circuits / destination / séquence d'allumage ;
-5. flux / puissance / vitesse / synchronisation finale.
 
-Il fonctionne avec le endpoint public `/api/public_state.php` et ne nécessite aucune session joueur.
+## Identité visuelle
+Le logo officiel RT ESCAPE fourni par RT EVENTS est intégré dans la landing page, l’accès joueur, le cockpit maître du jeu, l’interface joueur et l’écran salle via `assets/rt-escape-logo.png`.
