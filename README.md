@@ -1,26 +1,20 @@
-# RT ESCAPE V6 — ROOM FIRST
+# RT EVENTS — ESCAPE ENGINE V7
 
-Cette version recentre l’expérience sur l’escape game en salle. L’écran de salle est un décor cinématique de DeLorean et le maître du jeu pilote les événements pendant sa narration. Les téléphones servent principalement à l’identité secrète et à la synchronisation des joueurs, pas à remplacer le jeu physique.
+V7 ajoute un véritable **ÉCRAN SALLE générique** synchronisé avec les joueurs.
 
-## Épreuve 1
-1. Les joueurs rejoignent la partie.
-2. Chaque joueur reçoit une place et une identité mystérieuse.
-3. Ils prennent physiquement place dans la DeLorean de la salle.
-4. Chaque joueur confirme « je suis en place ».
-5. Quand tout le monde est prêt, la partie démarre.
-6. Le maître du jeu raconte l’histoire en direct.
-7. Depuis le cockpit admin, il déclenche les événements visuels de la DeLorean : histoire, lumières, moteur, anomalie, coordonnées, charge du Flux, saut temporel.
-8. Les joueurs cherchent et coopèrent physiquement dans la salle.
-9. Quand le maître du jeu veut demander la résolution, il peut forcer le terminal/réponse.
+## Les 3 interfaces
+- **Joueurs** : chaque joueur joue depuis son téléphone, avec ses informations et commandes privées.
+- **Écran salle** : `/game/screen.php?code=XXXXXX` — TV / vidéoprojecteur. Il visualise l'état collectif, les énigmes et les éléments utiles à toute la salle sans révéler automatiquement les réponses.
+- **Maître du jeu / admin** : contrôle la partie, les événements, les indices, les réponses et le passage des étapes.
 
-## Écran de salle
-Ouvrir `/game/screen.php?code=XXXXXX` sur le PC/TV/vidéoprojecteur de la salle.
+Le principe reste **room-first** : la salle physique est le jeu, les téléphones sont les interfaces individuelles et l'écran est le support commun.
 
-## Déploiement
-Ne pas supprimer `storage/escape.sqlite`.
-```powershell
-cd "C:\Users\admin\Documents\rteventsfr"
-git add .
-git commit -m "RT ESCAPE V6 - room first DeLorean et mode maitre du jeu"
-git push origin main
-```
+## Écran salle V7
+L'écran s'adapte automatiquement à l'étape :
+1. attente et mise en place de l'équipage ;
+2. visualisation des archives et progression collective ;
+3. console radio / fréquence / signal ;
+4. time circuits / destination / séquence d'allumage ;
+5. flux / puissance / vitesse / synchronisation finale.
+
+Il fonctionne avec le endpoint public `/api/public_state.php` et ne nécessite aucune session joueur.
