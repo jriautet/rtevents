@@ -12,9 +12,7 @@ $name=mb_substr($name,0,30);
 $token=bin2hex(random_bytes(16));
 $countStmt=db()->prepare("SELECT COUNT(*) FROM players WHERE game_id=?"); $countStmt->execute([$game['id']]); $count=(int)$countStmt->fetchColumn();
 if($count>=6){ flash('Cette DeLorean est complète.'); redirect('/game/login.php?code='.rawurlencode($code)); }
-$roles=player_roles_for_count($count+1); $assigned=$roles[$count];
-db()->prepare("INSERT INTO players(game_id,name,player_token,seat,role_key,ready) VALUES(?,?,?,?,?,0)")->execute([$game['id'],$name,$token,$assigned['seat'],$assigned['role_key']]);
+db()->prepare("INSERT INTO players(game_id,name,player_token,seat,role_key,ready) VALUES(?,?,?,?,?,0)")->execute([$game['id'],$name,$token,null,null]);
 $playerId=(int)db()->lastInsertId();
-rebalance_player_roles((int)$game['id']);
 $_SESSION['player_game_id']=(int)$game['id']; $_SESSION['player_id']=$playerId; $_SESSION['player_token']=$token; $_SESSION['player_name']=$name; $_SESSION['player_code']=$code;
 redirect('/game/play.php');

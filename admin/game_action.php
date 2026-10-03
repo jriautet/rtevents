@@ -4,6 +4,7 @@ $id=(int)($_POST['id']??0); $action=$_POST['action']??''; $pdo=db();
 $s=$pdo->prepare("SELECT g.*,s.slug FROM games g JOIN stories s ON s.id=g.story_id WHERE g.id=?");$s->execute([$id]);$g=$s->fetch(PDO::FETCH_ASSOC);if(!$g) redirect('/admin/index.php');
 $now=iso_now(); $stageSecs=stage_duration_seconds($g);
 if($action==='start'){
+    if(!all_players_ready($id)){ flash('Impossible de démarrer : chaque joueur doit avoir un rôle attribué et avoir confirmé sa position.'); redirect('/admin/game.php?id='.$id); }
     $status=$g['status']==='paused'?'running':'running';
     if(empty($g['started_at'])){
         $pdo->prepare("UPDATE games SET status='running',current_stage=CASE WHEN current_stage=0 THEN 1 ELSE current_stage END,started_at=?,ends_at=datetime(?,'+'||duration||' minutes'),stage_started_at=?,stage_ends_at=datetime(?,'+'||?||' seconds'),response_required=0,response_value=NULL WHERE id=?")
@@ -41,7 +42,22 @@ if($action==='start'){
     if($current>0){ set_state($id,'answer_revealed_stage_'.$current,'0'); log_game($id,'answer_hidden',['stage'=>$current]); }
 }elseif($action==='delete_player'){
     $playerId=(int)($_POST['player_id']??0);
-    if($playerId>0){ $pdo->prepare('DELETE FROM players WHERE id=? AND game_id=?')->execute([$playerId,$id]); rebalance_player_roles($id); log_game($id,'player_deleted',['player_id'=>$playerId]); }
+    if($playerId>0){ $pdo->prepare('DELETE FROM players WHERE id=? AND game_id=?')->execute([$playerId,$id]); log_game($id,'player_deleted',['player_id'=>$playerId]); }
+}elseif($action==='assign_role'){
+    $playerId=(int)($_POST['player_id']??0);
+    $roleKey=trim((string)($_POST['role_key']??''));
+    $roleDef=player_role_definition($roleKey);
+    if($playerId<=0 || !$roleDef){ flash('Rôle invalide.'); }
+    else {
+        $chk=$pdo->prepare('SELECT id FROM players WHERE game_id=? AND role_key=? AND id<>? LIMIT 1');
+        $chk->execute([$id,$roleKey,$playerId]);
+        if($chk->fetchColumn()) flash('Ce rôle est déjà attribué à un autre joueur.');
+        else {
+            $pdo->prepare('UPDATE players SET role_key=?,seat=?,ready=0 WHERE id=? AND game_id=?')->execute([$roleDef['role_key'],$roleDef['seat'],$playerId,$id]);
+            log_game($id,'role_assigned',['player_id'=>$playerId,'role_key'=>$roleKey]);
+            flash('Rôle attribué : '.$roleDef['label'].'. Le joueur devra confirmer sa position.');
+        }
+    }
 }elseif($action==='delete_game'){
     log_game($id,'game_deleted');
     $pdo->prepare('DELETE FROM games WHERE id=?')->execute([$id]);

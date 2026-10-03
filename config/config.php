@@ -164,51 +164,38 @@ function get_state(int $gameId,string $key,?string $default=null): ?string {
 }
 function answer_revealed(int $gameId,int $stage): bool { return get_state($gameId,'answer_revealed_stage_'.$stage,'0') === '1'; }
 
-function player_roles_for_count(int $count): array {
-    $sets = [
-        1 => [['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu es le seul à pouvoir déclencher le départ. Observe bien le tableau de bord.']],
-        2 => [
-            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu es responsable du départ.'],
-            ['seat'=>'PASSAGER','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les anomalies temporelles et les informations affichées par les instruments.'],
-        ],
-        3 => [
-            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Ton tableau de bord contient une information que les autres n’ont pas.'],
-            ['seat'=>'PASSAGER GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements. Ta mémoire de Hill Valley sera indispensable.'],
-            ['seat'=>'PASSAGER DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu comprends les systèmes de la machine. Certaines commandes te sont destinées.'],
-        ],
-        4 => [
-            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean. Tu dois écouter les autres mais tu es responsable du départ.'],
-            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles. Tu recevras des informations que les autres ne voient pas.'],
-            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements. Certaines informations historiques sont cachées pour toi.'],
-            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu es le spécialiste de la machine. Tu sais reconnaître les systèmes à remettre sous tension.'],
-        ],
-        5 => [
-            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ.'],
-            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles.'],
-            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements de Hill Valley.'],
-            ['seat'=>'PASSAGER ARRIÈRE CENTRE','role_key'=>'observer','label'=>'L’OBSERVATEUR','secret'=>'Tu remarques les détails étranges et les indices dissimulés dans la scène.'],
-            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu maîtrises les systèmes électriques et le Flux Capacitor.'],
-        ],
-        6 => [
-            ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ.'],
-            ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles.'],
-            ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements de Hill Valley.'],
-            ['seat'=>'PASSAGER ARRIÈRE CENTRE','role_key'=>'observer','label'=>'L’OBSERVATEUR','secret'=>'Tu remarques les détails étranges et les indices dissimulés dans la scène.'],
-            ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu maîtrises les systèmes électriques et le Flux Capacitor.'],
-            ['seat'=>'NAVIGATEUR','role_key'=>'navigator','label'=>'LE NAVIGATEUR','secret'=>'Tu surveilles la destination et les coordonnées du voyage.'],
-        ],
+function player_role_definitions(): array {
+    return [
+        'driver' => ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ. Écoute les autres mais observe aussi ton poste.'],
+        'chrononaut' => ['seat'=>'PASSAGER AVANT','role_key'=>'chrononaut','label'=>'LE CHRONONAUTE','secret'=>'Tu surveilles les coordonnées temporelles et les anomalies. Certaines informations te sont destinées.'],
+        'archivist' => ['seat'=>'PASSAGER ARRIÈRE GAUCHE','role_key'=>'archivist','label'=>'L’ARCHIVISTE','secret'=>'Tu connais les dates et les événements de Hill Valley. Certaines informations historiques sont cachées pour toi.'],
+        'technician' => ['seat'=>'PASSAGER ARRIÈRE DROIT','role_key'=>'technician','label'=>'LE TECHNICIEN','secret'=>'Tu es le spécialiste de la machine. Tu sais reconnaître les systèmes à remettre sous tension.'],
+        'observer' => ['seat'=>'PASSAGER ARRIÈRE CENTRE','role_key'=>'observer','label'=>'L’OBSERVATEUR','secret'=>'Tu remarques les détails étranges et les indices dissimulés dans la scène.'],
+        'navigator' => ['seat'=>'NAVIGATEUR','role_key'=>'navigator','label'=>'LE NAVIGATEUR','secret'=>'Tu surveilles la destination et les coordonnées du voyage.'],
     ];
-    return $sets[max(1,min(6,$count))];
+}
+function player_role_definition(?string $roleKey): ?array {
+    if (!$roleKey) return null;
+    $defs = player_role_definitions();
+    return $defs[$roleKey] ?? null;
+}
+function player_roles_for_count(int $count): array {
+    $order = ['driver','chrononaut','archivist','technician','observer','navigator'];
+    $count = max(1,min(6,$count));
+    $defs = player_role_definitions();
+    $out=[];
+    foreach(array_slice($order,0,$count) as $key) $out[]=$defs[$key];
+    return $out;
 }
 function rebalance_player_roles(int $gameId): void {
-    $q=db()->prepare("SELECT id FROM players WHERE game_id=? ORDER BY id"); $q->execute([$gameId]); $ids=array_column($q->fetchAll(PDO::FETCH_ASSOC),'id');
-    $roles=player_roles_for_count(count($ids));
-    $up=db()->prepare("UPDATE players SET seat=?,role_key=? WHERE id=?");
-    foreach($ids as $i=>$pid){$r=$roles[$i]??$roles[count($roles)-1];$up->execute([$r['seat'],$r['role_key'],$pid]);}
+    // Les rôles sont attribués exclusivement par le maître du jeu.
+    // Cette fonction est conservée pour compatibilité avec les anciennes versions,
+    // mais elle ne modifie plus les joueurs automatiquement.
 }
 function all_players_ready(int $gameId): bool {
-    $q=db()->prepare("SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN ready=1 THEN 1 ELSE 0 END),0) ready FROM players WHERE game_id=?");
-    $q->execute([$gameId]); $r=$q->fetch(PDO::FETCH_ASSOC); return (int)$r['total']>0 && (int)$r['total']===(int)$r['ready'];
+    $q=db()->prepare("SELECT COUNT(*) total, COALESCE(SUM(CASE WHEN role_key IS NOT NULL AND role_key<>'' AND ready=1 THEN 1 ELSE 0 END),0) ready, COALESCE(SUM(CASE WHEN role_key IS NULL OR role_key='' THEN 1 ELSE 0 END),0) unassigned FROM players WHERE game_id=?");
+    $q->execute([$gameId]); $r=$q->fetch(PDO::FETCH_ASSOC);
+    return (int)$r['total']>0 && (int)$r['unassigned']===0 && (int)$r['total']===(int)$r['ready'];
 }
 function game_content(string $slug): array {
     if ($slug !== 'retour-vers-le-futur') return [];

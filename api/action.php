@@ -7,16 +7,14 @@ if(!$g){http_response_code(404);echo json_encode(['ok'=>false]);exit;}
 $stage=(int)$g['current_stage']; $action=trim((string)($_POST['action']??'')); $value=trim((string)($_POST['value']??'')); $rq=db()->prepare("SELECT role_key FROM players WHERE id=? AND game_id=?");$rq->execute([$playerId,$gameId]);$myRole=(string)$rq->fetchColumn();
 $content=game_content($g['slug']); if($action==='ready'){
     if(!$playerId){echo json_encode(['ok'=>false,'message'=>'Joueur non identifié.']);exit;}
-    db()->prepare("UPDATE players SET ready=1,last_seen_at=CURRENT_TIMESTAMP WHERE id=? AND game_id=?")->execute([$playerId,$gameId]);
-    $ready=all_players_ready($gameId);
-    if($ready){
-        $q=$pdo=db(); $gs=$q->prepare("SELECT * FROM games WHERE id=?");$gs->execute([$gameId]);$gg=$gs->fetch(PDO::FETCH_ASSOC);$now=iso_now();$secs=stage_duration_seconds($gg);
-        if($gg['status']==='waiting'){
-            $q->prepare("UPDATE games SET status='running',current_stage=1,started_at=?,ends_at=datetime(?,'+'||duration||' minutes'),stage_started_at=?,stage_ends_at=datetime(?,'+'||?||' seconds'),response_required=0,response_value=NULL WHERE id=?")->execute([$now,$now,$now,$now,$secs,$gameId]);
-            log_game($gameId,'crew_ready_start');
-        }
+    $rq=db()->prepare("SELECT role_key,ready FROM players WHERE id=? AND game_id=?");$rq->execute([$playerId,$gameId]);$meReady=$rq->fetch(PDO::FETCH_ASSOC);
+    if(!$meReady){echo json_encode(['ok'=>false,'message'=>'Joueur non identifié.']);exit;}
+    if(empty($meReady['role_key'])){echo json_encode(['ok'=>false,'message'=>'Ton rôle n’a pas encore été attribué par le maître du jeu.'],JSON_UNESCAPED_UNICODE);exit;}
+    if((int)$meReady['ready']===0){
+        db()->prepare("UPDATE players SET ready=1,last_seen_at=CURRENT_TIMESTAMP WHERE id=? AND game_id=?")->execute([$playerId,$gameId]);
     }
-    echo json_encode(['ok'=>true,'ready'=>true,'all_ready'=>$ready,'message'=>$ready?'Équipage complet. La machine démarre.':'Position confirmée. Attendez les autres membres de l’équipage.'],JSON_UNESCAPED_UNICODE);exit;
+    $ready=all_players_ready($gameId);
+    echo json_encode(['ok'=>true,'ready'=>true,'all_ready'=>$ready,'message'=>$ready?'Équipage complet. Le maître du jeu peut lancer la machine.':'Position confirmée. Attendez les autres membres de l’équipage.'],JSON_UNESCAPED_UNICODE);exit;
 }
 if(!$stage||!isset($content[$stage])){echo json_encode(['ok'=>false,'message'=>'La machine est en attente.']);exit;}
 function puzzle_state(int $gameId,int $stage): array { $raw=get_state($gameId,'puzzle_stage_'.$stage,'{}'); $v=json_decode($raw,true); return is_array($v)?$v:[]; }
