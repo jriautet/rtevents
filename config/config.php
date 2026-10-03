@@ -128,6 +128,7 @@ function ensure_schema(PDO $pdo): void {
     $mailboxCols = [];
     foreach ($pdo->query("PRAGMA table_info(mailbox)")->fetchAll(PDO::FETCH_ASSOC) as $c) $mailboxCols[$c['name']] = true;
     if (!isset($mailboxCols['stage'])) $pdo->exec("ALTER TABLE mailbox ADD COLUMN stage INTEGER NOT NULL DEFAULT 0");
+    if (!isset($mailboxCols['active'])) { $pdo->exec("ALTER TABLE mailbox ADD COLUMN active INTEGER NOT NULL DEFAULT 1"); }
 
     // Migration douce pour les anciennes bases créées avec la V1.
     $cols = [];
