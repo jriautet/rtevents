@@ -4,7 +4,7 @@ if(empty($_SESSION['player_game_id'])){http_response_code(401);echo json_encode(
 $gameId=(int)$_SESSION['player_game_id'];
 $st=db()->prepare("SELECT g.*,s.slug,s.title,s.subtitle FROM games g JOIN stories s ON s.id=g.story_id WHERE g.id=?");$st->execute([$gameId]);$g=$st->fetch(PDO::FETCH_ASSOC);
 if(!$g){http_response_code(404);echo json_encode(['ok'=>false]);exit;}
-$playerId=(int)($_SESSION['player_id']??0);
+$playerId=current_player_id($gameId);
 if($playerId){
     $ps=db()->prepare("SELECT id FROM players WHERE id=? AND game_id=?"); $ps->execute([$playerId,$gameId]);
     if(!$ps->fetchColumn()){ unset($_SESSION['player_id'],$_SESSION['player_game_id'],$_SESSION['player_token']); http_response_code(410); echo json_encode(['ok'=>false,'removed'=>true,'message'=>'Tu as été retiré de la partie.']); exit; }

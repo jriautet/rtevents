@@ -164,6 +164,19 @@ function get_state(int $gameId,string $key,?string $default=null): ?string {
 }
 function answer_revealed(int $gameId,int $stage): bool { return get_state($gameId,'answer_revealed_stage_'.$stage,'0') === '1'; }
 
+function current_player_id(int $gameId): int {
+    $token = trim((string)($_POST['player_token'] ?? $_GET['player_token'] ?? $_SERVER['HTTP_X_PLAYER_TOKEN'] ?? ''));
+    if ($token !== '') {
+        $q = db()->prepare('SELECT id FROM players WHERE game_id=? AND player_token=? LIMIT 1');
+        $q->execute([$gameId, $token]);
+        $id = $q->fetchColumn();
+        if ($id !== false) return (int)$id;
+    }
+    // Compatibilité avec les anciennes sessions. Les nouvelles interfaces envoient
+    // toujours leur token propre afin que plusieurs joueurs puissent tester sur le même navigateur.
+    return (int)($_SESSION['player_id'] ?? 0);
+}
+
 function player_role_definitions(): array {
     return [
         'driver' => ['seat'=>'CONDUCTEUR','role_key'=>'driver','label'=>'LE CONDUCTEUR','secret'=>'Tu conduis la DeLorean et contrôles le départ. Écoute les autres mais observe aussi ton poste.'],
